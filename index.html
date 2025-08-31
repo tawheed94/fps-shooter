@@ -58,23 +58,32 @@
   <script>
     // Scene setup
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x333333); // gray background so it's never fully black
+
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Lighting
-    scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+    // Lights
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 1);
+    dir.position.set(10,20,10);
+    scene.add(dir);
 
     // Ground
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(200,200), new THREE.MeshPhongMaterial({color:0x228822}));
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(200,200),
+      new THREE.MeshPhongMaterial({color:0x228822, side:THREE.DoubleSide})
+    );
     ground.rotation.x = -Math.PI/2;
     scene.add(ground);
 
     // Controls
     const controls = new THREE.PointerLockControls(camera, document.body);
     document.body.addEventListener('click', () => controls.lock());
-    camera.position.y = 2;
+    camera.position.set(0, 5, 10); // start above ground
 
     const velocity = new THREE.Vector3();
     const keys = {};
@@ -88,10 +97,10 @@
     // Training dummies
     const dummies = [];
     const dummyGeo = new THREE.BoxGeometry(1,2,1);
-    const dummyMat = new THREE.MeshPhongMaterial({color:0xff0000});
     for (let i=0;i<30;i++) {
-      const dummy = new THREE.Mesh(dummyGeo, dummyMat.clone());
-      dummy.position.set((Math.random()-0.5)*180,1,(Math.random()-0.5)*180);
+      const dummyMat = new THREE.MeshPhongMaterial({color:0xff0000});
+      const dummy = new THREE.Mesh(dummyGeo, dummyMat);
+      dummy.position.set((Math.random()-0.5)*100,1,(Math.random()-0.5)*100);
       scene.add(dummy);
       dummies.push(dummy);
     }
@@ -114,19 +123,16 @@
     });
 
     // Aim down sights (right click)
-    let aiming = false;
-    document.addEventListener('contextmenu', e => e.preventDefault()); // disable browser menu
+    document.addEventListener('contextmenu', e => e.preventDefault());
     document.addEventListener('mousedown', e => {
-      if (e.button === 2) { // right click
-        aiming = true;
-        camera.fov = 40; // zoom in
+      if (e.button === 2) {
+        camera.fov = 40;
         camera.updateProjectionMatrix();
       }
     });
     document.addEventListener('mouseup', e => {
       if (e.button === 2) {
-        aiming = false;
-        camera.fov = 75; // reset zoom
+        camera.fov = 75;
         camera.updateProjectionMatrix();
       }
     });
@@ -146,7 +152,6 @@
     function animate() {
       const delta = clock.getDelta();
 
-      // Player movement
       velocity.set(0,0,0);
       if (keys['KeyW'] || mobile.up) velocity.z -= 5 * delta;
       if (keys['KeyS'] || mobile.down) velocity.z += 5 * delta;
